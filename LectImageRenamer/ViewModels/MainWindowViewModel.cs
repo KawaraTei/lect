@@ -23,6 +23,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     };
 
     private bool _isGridView = true;
+    private bool _isCommentMode;
+    private readonly Dictionary<string, FolderComments> _commentDocuments = new(StringComparer.OrdinalIgnoreCase);
     private double _gridItemSize = 160;
     private string _renamePrefix = "image";
     private int _renameStartNumber = 1;
@@ -49,7 +51,32 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public bool IsGridView
     {
         get => _isGridView;
-        set => SetField(ref _isGridView, value);
+        set
+        {
+            if (SetField(ref _isGridView, value)) OnPropertyChanged(nameof(ShowGrid));
+        }
+    }
+
+    public bool IsCommentMode
+    {
+        get => _isCommentMode;
+        set
+        {
+            if (!SetField(ref _isCommentMode, value)) return;
+            OnPropertyChanged(nameof(ShowGrid));
+            OnPropertyChanged(nameof(CanChooseLayout));
+            if (!value && !FlushComments()) StatusText = "コメントを保存できません。コメントモードで保存状態を確認してください。";
+        }
+    }
+
+    public bool ShowGrid => IsCommentMode || IsGridView;
+    public bool CanChooseLayout => !IsCommentMode;
+
+    public bool FlushComments()
+    {
+        bool success = true;
+        foreach (var document in _commentDocuments.Values) success &= document.Flush();
+        return success;
     }
 
     public double GridItemSize
@@ -99,7 +126,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
             try
             {
-                Images.Add(new ImageItem(candidate));
+                string directory = Path.GetDirectoryName(candidate)!;
+                if (!_commentDocuments.TryGetValue(directory, out var document))
+                {
+                    document = new FolderComments(directory);
+                    _commentDocuments.Add(directory, document);
+                }
+                var image = new ImageItem(candidate) { CommentDocument = document };
+                image.LoadComment();
+                Images.Add(image);
                 added++;
             }
             catch
@@ -162,6 +197,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     private void ClearImages()
     {
+        if (!FlushComments())
+        {
+            StatusText = "コメントを保存できません。一覧のクリアを中止しました。";
+            return;
+        }
         List<ImageItem> selectedItems = SelectedItems.ToList();
         if (selectedItems.Count > 0)
         {
@@ -223,6 +263,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         foreach (ImageItem item in deletedItems)
         {
+            if (!string.IsNullOrEmpty(item.Comment)) item.CommentDocument?.Update(item.FileName, string.Empty);
             Images.Remove(item);
         }
 
@@ -238,10 +279,16 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         StatusText = failedFiles.Count == 0
             ? $"{deletedItems.Count} 件の画像をごみ箱へ移動しました。"
             : $"{deletedItems.Count} 件を削除しました。失敗: {failedFiles.Count} 件。";
+        if (!FlushComments()) StatusText += " コメントの更新を保存できませんでした。";
     }
 
     private void RenameAllImages()
     {
+        if (!FlushComments())
+        {
+            StatusText = "コメントを保存できません。リネームを中止しました。";
+            return;
+        }
         if (Images.Count == 0)
         {
             return;
@@ -328,6 +375,11 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
         RefreshIndexes();
         StatusText = $"{plans.Count} 件を連番リネームしました。";
+        foreach (var group in plans.GroupBy(plan => plan.Image.CommentDocument))
+        {
+            group.Key?.Rename(group.Select(plan => (Path.GetFileName(plan.SourcePath), Path.GetFileName(plan.TargetPath))).ToList());
+        }
+        if (!FlushComments()) StatusText += " コメントのファイル名更新を保存できませんでした。";
     }
 
     private static void RollBackRenames(IEnumerable<(RenamePlan Plan, string TempPath)> tempPlans)

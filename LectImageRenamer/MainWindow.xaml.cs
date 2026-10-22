@@ -2,6 +2,7 @@
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
+using System.ComponentModel;
 using LectImageRenamer.Models;
 using LectImageRenamer.ViewModels;
 
@@ -27,6 +28,17 @@ public partial class MainWindow : Window
         _viewModel.ImagesDeleted += OnImagesDeleted;
         _viewModel.ImagesCleared += OnImagesCleared;
         DataContext = _viewModel;
+        Closing += OnClosing;
+        Closed += (_, _) => _previewWindow?.Close();
+    }
+
+    private void OnClosing(object? sender, CancelEventArgs e)
+    {
+        if (!_viewModel.FlushComments())
+        {
+            e.Cancel = MessageBox.Show("コメントを保存できませんでした。保存せず終了しますか？", "コメント",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes;
+        }
     }
 
     private void OnImagesDeleting(object? sender, EventArgs e)
@@ -84,8 +96,13 @@ public partial class MainWindow : Window
             return;
         }
 
-        _previewWindow ??= new PreviewWindow();
-        _previewWindow.Closed += (_, _) => _previewWindow = null;
+        if (_previewWindow is null)
+        {
+            _previewWindow = new PreviewWindow();
+            _previewWindow.SetBinding(PreviewWindow.IsCommentModeProperty,
+                new System.Windows.Data.Binding(nameof(MainWindowViewModel.IsCommentMode)) { Source = _viewModel, Mode = System.Windows.Data.BindingMode.TwoWay });
+            _previewWindow.Closed += (_, _) => _previewWindow = null;
+        }
         _previewWindow.ShowImage(selectedItems[0]);
     }
 
@@ -95,6 +112,12 @@ public partial class MainWindow : Window
         _dragStartItem = FindAncestor<ListBoxItem>(e.OriginalSource as DependencyObject)?.DataContext as ImageItem;
         _preservedMultiSelectionForDrag = false;
         _dragStarted = false;
+
+        if (IsTextInputElement(e.OriginalSource as DependencyObject))
+        {
+            _dragStartItem = null;
+            return;
+        }
 
         if (_dragStartItem is not null &&
             _dragStartItem.IsSelected &&
@@ -224,7 +247,7 @@ public partial class MainWindow : Window
 
     private bool TryHandleGridHorizontalNavigation(KeyEventArgs e)
     {
-        if (!_viewModel.IsGridView ||
+        if (!_viewModel.ShowGrid ||
             e.Key is not Key.Left and not Key.Right ||
             FindAncestor<ListBox>(e.OriginalSource as DependencyObject) != GridImageList ||
             _viewModel.Images.Count == 0)

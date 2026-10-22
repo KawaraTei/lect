@@ -11,6 +11,20 @@ public sealed class ImageItem : INotifyPropertyChanged
     private string _fileName;
     private int _displayIndex;
     private bool _isSelected;
+    private string _comment = string.Empty;
+
+    public FolderComments? CommentDocument { get; init; }
+
+    public string Comment
+    {
+        get => _comment;
+        set
+        {
+            if (SetField(ref _comment, value)) CommentDocument?.Update(FileName, value);
+        }
+    }
+
+    public void LoadComment() => _comment = CommentDocument?.GetComment(FileName) ?? string.Empty;
 
     public ImageItem(string fullPath)
     {

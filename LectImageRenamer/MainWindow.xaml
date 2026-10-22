@@ -90,6 +90,7 @@
         </Style>
 
         <DataTemplate x:Key="GridImageTemplate">
+          <StackPanel Width="{Binding DataContext.GridItemSize, RelativeSource={RelativeSource AncestorType={x:Type ListBox}}}">
             <Border Width="{Binding DataContext.GridItemSize, RelativeSource={RelativeSource AncestorType={x:Type ListBox}}}"
                     Height="{Binding DataContext.GridItemSize, RelativeSource={RelativeSource AncestorType={x:Type ListBox}}}"
                     BorderBrush="{StaticResource MutedBorderBrush}"
@@ -115,6 +116,8 @@
                     </Border>
                 </Grid>
             </Border>
+            <local:CommentEditor Visibility="{Binding DataContext.IsCommentMode, RelativeSource={RelativeSource AncestorType={x:Type ListBox}}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+          </StackPanel>
         </DataTemplate>
 
         <DataTemplate x:Key="ListImageTemplate">
@@ -179,6 +182,10 @@
                 BorderThickness="0,0,0,1"
                 Padding="12">
             <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
@@ -187,6 +194,7 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0"
+                            IsEnabled="{Binding CanChooseLayout}"
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
                     <RadioButton Content="グリッド"
@@ -213,13 +221,43 @@
                             Value="{Binding GridItemSize}" />
                 </StackPanel>
 
-                <TextBlock Grid.Column="2"
+                <ToggleButton Grid.Column="2" Content="コメントモード"
+                              IsChecked="{Binding IsCommentMode, Mode=TwoWay}"
+                              HorizontalAlignment="Left" Margin="24,0,0,0" Padding="12,6"
+                              AutomationProperties.Name="コメントモード">
+                    <ToggleButton.Style>
+                        <Style TargetType="ToggleButton">
+                            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="ModeBorder" Background="{StaticResource SurfaceAltBackgroundBrush}"
+                                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="ModeBorder" Property="Background" Value="#263B56" />
+                                                <Setter TargetName="ModeBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="ModeBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ToggleButton.Style>
+                </ToggleButton>
+
+                <TextBlock Grid.Column="3"
                            Text="{Binding DropHint}"
                            VerticalAlignment="Center"
                            Foreground="{StaticResource SecondaryTextBrush}"
                            Margin="28,0" />
 
-                <StackPanel Grid.Column="3"
+                <StackPanel Grid.Row="1" Grid.ColumnSpan="4" Margin="0,10,0,0"
                             Orientation="Horizontal"
                             VerticalAlignment="Center">
                     <TextBlock Text="名前"
@@ -295,7 +333,7 @@
                      BorderBrush="{StaticResource BorderBrush}"
                      BorderThickness="1"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     Visibility="{Binding IsGridView, Converter={StaticResource BooleanToVisibilityConverter}}"
+                     Visibility="{Binding ShowGrid, Converter={StaticResource BooleanToVisibilityConverter}}"
                      SelectionChanged="ImageList_SelectionChanged"
                      PreviewMouseLeftButtonDown="ImageList_PreviewMouseLeftButtonDown"
                      PreviewMouseLeftButtonUp="ImageList_PreviewMouseLeftButtonUp"
@@ -318,7 +356,7 @@
                      Background="{StaticResource SurfaceBackgroundBrush}"
                      BorderBrush="{StaticResource BorderBrush}"
                      BorderThickness="1"
-                     Visibility="{Binding IsGridView, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+                     Visibility="{Binding ShowGrid, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
                      SelectionChanged="ImageList_SelectionChanged"
                      PreviewMouseLeftButtonDown="ImageList_PreviewMouseLeftButtonDown"
                      PreviewMouseLeftButtonUp="ImageList_PreviewMouseLeftButtonUp"
