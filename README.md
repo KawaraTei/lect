@@ -5,7 +5,14 @@ Windows用の画像並び替え・連番リネームアプリです。
 
 ## ダウンロード
 
-[release1.2](https://github.com/KawaraTei/rect/releases/tag/release1.2) の `LectImageRenamer.exe` をダウンロードして実行してください。Windows 64ビット向けで、.NETランタイムを同梱しています。
+[version1.3](https://github.com/KawaraTei/rect/releases/tag/release1.3) の `LectImageRenamer.exe` をダウンロードして実行してください。Windows 64ビット向けで、.NETランタイムを同梱しています。
+
+## version1.3の変更
+
+- 上部に「コメントモード」を追加しました。各画像の下に約3行の入力欄を表示し、解除すると元のグリッド／リスト表示に戻ります。
+- プレビューからもコメントを入力でき、一覧と内容が同期します。
+- ファイル名・保存日時・コメントを、画像フォルダーごとの `image-comments.json` に自動保存します。保存したコメントは画像の再読込時に復元します。
+- アプリ内でリネームした場合は、コメントのファイル名も更新します。
 
 ## release1.2の変更
 
